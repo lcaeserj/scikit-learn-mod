@@ -519,7 +519,6 @@ def mean_squared_error(
     )
     check_consistent_length(y_true, y_pred, sample_weight)
     output_errors = _average((y_true - y_pred) ** 2, axis=0, weights=sample_weight)
-    print("TEST ----------------------------------------------------------------------------")
     if isinstance(multioutput, str):
         if multioutput == "raw_values":
             return output_errors
@@ -530,7 +529,7 @@ def mean_squared_error(
     # See comment in mean_absolute_error
     mean_squared_error = _average(output_errors, weights=multioutput)
     assert mean_squared_error.shape == ()
-    return float(0)
+    return float(mean_squared_error)
 
 
 @validate_params(
