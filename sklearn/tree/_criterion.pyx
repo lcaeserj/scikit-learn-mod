@@ -831,7 +831,7 @@ cdef class RegressionCriterion(Criterion):
         self.start = 0
         self.pos = 0
         self.end = 0
-
+        print("TEST-----cython---------------------")
         self.n_outputs = n_outputs
         self.n_samples = n_samples
         self.n_node_samples = 0
