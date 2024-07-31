@@ -519,7 +519,7 @@ def mean_squared_error(
     )
     check_consistent_length(y_true, y_pred, sample_weight)
     output_errors = _average((y_true - y_pred) ** 2, axis=0, weights=sample_weight)
-
+    print("TEST --------------------------------------------------------------------------")
     if isinstance(multioutput, str):
         if multioutput == "raw_values":
             return output_errors
