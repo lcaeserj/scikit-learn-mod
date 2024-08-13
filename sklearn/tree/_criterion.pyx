@@ -1183,7 +1183,7 @@ cdef class MSE(RegressionCriterion):
 
 # added by lukas:
 # adding own RegressionCriterion and MSE classes
-------------------lukas begin------------------------------------------------------------------------------------------------------
+# ------------------lukas begin------------------------------------------------------------------------------------------------------
 cdef class WeightedRegressionCriterion(Criterion):
     r"""Abstract regression criterion.
 
@@ -1569,7 +1569,7 @@ cdef class WeightedMSE(WeightedRegressionCriterion):
 
 
 
-------------------lukas end------------------------------------------------------------------------------------------------------
+# ------------------lukas end------------------------------------------------------------------------------------------------------
 
 
 
