@@ -1263,6 +1263,7 @@ cdef class WeightedRegressionCriterion(Criterion):
         cdef float64_t y_ik
         cdef float64_t w_y_ik
         cdef float64_t w = 1.0
+        # weighted classes
         self.sq_sum_total = 0.0
         memset(&self.sum_total[0], 0, self.n_outputs * sizeof(float64_t))
 
