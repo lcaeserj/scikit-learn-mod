@@ -875,7 +875,7 @@ cdef class RegressionCriterion(Criterion):
         self.n_node_samples = end - start
         self.weighted_n_samples = weighted_n_samples
         self.weighted_n_node_samples = 0.
-        self.test = 1
+
 
         cdef intp_t i
         cdef intp_t p
