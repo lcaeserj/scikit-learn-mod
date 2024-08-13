@@ -896,6 +896,8 @@ cdef class RegressionCriterion(Criterion):
             for k in range(self.n_outputs):
                 y_ik = self.y[i, k]
 
+                print("ok")
+
                 # added from lukas
                 #if k == 1:
                  #   k = 1
