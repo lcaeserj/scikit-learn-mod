@@ -884,6 +884,8 @@ cdef class RegressionCriterion(Criterion):
         cdef float64_t w_y_ik
         cdef float64_t w = 1.0
 
+        cdef intp_t index_of_AL2CU_local = self.index_of_AL2CU
+
         self.sq_sum_total = 0.0
         memset(&self.sum_total[0], 0, self.n_outputs * sizeof(float64_t))
 
@@ -899,8 +901,8 @@ cdef class RegressionCriterion(Criterion):
 
 
                 # added from lukas
-                if k == 1:
-                    k = 1
+                #if k == index_of_AL2CU_local:
+                 #   k = 1
 
                 #if k == self.index_of_AL2CU:
                  #   y_ik *= self.weight_for_AL2CU
