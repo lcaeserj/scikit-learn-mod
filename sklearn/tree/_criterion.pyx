@@ -896,8 +896,8 @@ cdef class RegressionCriterion(Criterion):
                 y_ik = self.y[i, k]
 
                 # added from lukas
-                if k == self.index_of_AL2CU:
-                    y_ik *= self.weight_for_AL2CU
+                #if k == self.index_of_AL2CU:
+                 #   y_ik *= self.weight_for_AL2CU
 
                 w_y_ik = w * y_ik
                 self.sum_total[k] += w_y_ik
