@@ -831,7 +831,6 @@ cdef class RegressionCriterion(Criterion):
         self.start = 0
         self.pos = 0
         self.end = 0
-        print("TEST-----cython---------------------")
         self.n_outputs = n_outputs
         self.n_samples = n_samples
         self.n_node_samples = 0
@@ -890,6 +889,8 @@ cdef class RegressionCriterion(Criterion):
 
             for k in range(self.n_outputs):
                 y_ik = self.y[i, k]
+
+
                 w_y_ik = w * y_ik
                 self.sum_total[k] += w_y_ik
                 self.sq_sum_total += w_y_ik * y_ik
@@ -1178,6 +1179,398 @@ cdef class MSE(RegressionCriterion):
 
         impurity_left[0] /= self.n_outputs
         impurity_right[0] /= self.n_outputs
+
+
+# added by lukas:
+# adding own RegressionCriterion and MSE classes
+------------------lukas begin------------------------------------------------------------------------------------------------------
+cdef class WeightedRegressionCriterion(Criterion):
+    r"""Abstract regression criterion.
+
+    This handles cases where the target is a continuous value, and is
+    evaluated by computing the variance of the target values left and right
+    of the split point. The computation takes linear time with `n_samples`
+    by using ::
+
+        var = \sum_i^n (y_i - y_bar) ** 2
+            = (\sum_i^n y_i ** 2) - n_samples * y_bar ** 2
+    """
+
+    def __cinit__(self, intp_t n_outputs, intp_t n_samples):
+        """Initialize parameters for this criterion.
+
+        Parameters
+        ----------
+        n_outputs : intp_t
+            The number of targets to be predicted
+
+        n_samples : intp_t
+            The total number of samples to fit on
+        """
+        # Default values
+        self.start = 0
+        self.pos = 0
+        self.end = 0
+        self.n_outputs = n_outputs
+        self.n_samples = n_samples
+        self.n_node_samples = 0
+        self.weighted_n_node_samples = 0.0
+        self.weighted_n_left = 0.0
+        self.weighted_n_right = 0.0
+        self.weighted_n_missing = 0.0
+
+        self.sq_sum_total = 0.0
+
+        self.sum_total = np.zeros(n_outputs, dtype=np.float64)
+        self.sum_left = np.zeros(n_outputs, dtype=np.float64)
+        self.sum_right = np.zeros(n_outputs, dtype=np.float64)
+
+        # added by lukas
+        # self.weight_for_AL2CU = 2
+        # self.index_of_AL2CU = 1
+
+    def __reduce__(self):
+        return (type(self), (self.n_outputs, self.n_samples), self.__getstate__())
+
+    cdef int init(
+        self,
+        const float64_t[:, ::1] y,
+        const float64_t[:] sample_weight,
+        float64_t weighted_n_samples,
+        const intp_t[:] sample_indices,
+        intp_t start,
+        intp_t end,
+    ) except -1 nogil:
+        """Initialize the criterion.
+
+        This initializes the criterion at node sample_indices[start:end] and children
+        sample_indices[start:start] and sample_indices[start:end].
+        """
+        # Initialize fields
+        self.y = y
+        self.sample_weight = sample_weight
+        self.sample_indices = sample_indices
+        self.start = start
+        self.end = end
+        self.n_node_samples = end - start
+        self.weighted_n_samples = weighted_n_samples
+        self.weighted_n_node_samples = 0.
+
+        cdef intp_t i
+        cdef intp_t p
+        cdef intp_t k
+        cdef float64_t y_ik
+        cdef float64_t w_y_ik
+        cdef float64_t w = 1.0
+        self.sq_sum_total = 0.0
+        memset(&self.sum_total[0], 0, self.n_outputs * sizeof(float64_t))
+
+        for p in range(start, end):
+            i = sample_indices[p]
+
+            if sample_weight is not None:
+                w = sample_weight[i]
+
+            for k in range(self.n_outputs):
+                y_ik = self.y[i, k]
+
+                # added from lukas
+                if k == self.index_of_AL2CU:
+                    y_ik *= self.weight_for_AL2CU
+
+                w_y_ik = w * y_ik
+                self.sum_total[k] += w_y_ik
+                self.sq_sum_total += w_y_ik * y_ik
+
+            self.weighted_n_node_samples += w
+
+        # Reset to pos=start
+        self.reset()
+        return 0
+
+    cdef void init_sum_missing(self):
+        """Init sum_missing to hold sums for missing values."""
+        self.sum_missing = np.zeros(self.n_outputs, dtype=np.float64)
+
+    cdef void init_missing(self, intp_t n_missing) noexcept nogil:
+        """Initialize sum_missing if there are missing values.
+
+        This method assumes that caller placed the missing samples in
+        self.sample_indices[-n_missing:]
+        """
+        cdef intp_t i, p, k
+        cdef float64_t y_ik
+        cdef float64_t w_y_ik
+        cdef float64_t w = 1.0
+
+        self.n_missing = n_missing
+        if n_missing == 0:
+            return
+
+        memset(&self.sum_missing[0], 0, self.n_outputs * sizeof(float64_t))
+
+        self.weighted_n_missing = 0.0
+
+        # The missing samples are assumed to be in self.sample_indices[-n_missing:]
+        for p in range(self.end - n_missing, self.end):
+            i = self.sample_indices[p]
+            if self.sample_weight is not None:
+                w = self.sample_weight[i]
+
+            for k in range(self.n_outputs):
+                y_ik = self.y[i, k]
+                w_y_ik = w * y_ik
+                self.sum_missing[k] += w_y_ik
+
+            self.weighted_n_missing += w
+
+    cdef int reset(self) except -1 nogil:
+        """Reset the criterion at pos=start."""
+        self.pos = self.start
+        _move_sums_regression(
+            self,
+            self.sum_left,
+            self.sum_right,
+            &self.weighted_n_left,
+            &self.weighted_n_right,
+            self.missing_go_to_left
+        )
+        return 0
+
+    cdef int reverse_reset(self) except -1 nogil:
+        """Reset the criterion at pos=end."""
+        self.pos = self.end
+        _move_sums_regression(
+            self,
+            self.sum_right,
+            self.sum_left,
+            &self.weighted_n_right,
+            &self.weighted_n_left,
+            not self.missing_go_to_left
+        )
+        return 0
+
+    cdef int update(self, intp_t new_pos) except -1 nogil:
+        """Updated statistics by moving sample_indices[pos:new_pos] to the left."""
+        cdef const float64_t[:] sample_weight = self.sample_weight
+        cdef const intp_t[:] sample_indices = self.sample_indices
+
+        cdef intp_t pos = self.pos
+
+        # The missing samples are assumed to be in
+        # self.sample_indices[-self.n_missing:] that is
+        # self.sample_indices[end_non_missing:self.end].
+        cdef intp_t end_non_missing = self.end - self.n_missing
+        cdef intp_t i
+        cdef intp_t p
+        cdef intp_t k
+        cdef float64_t w = 1.0
+
+        # Update statistics up to new_pos
+        #
+        # Given that
+        #           sum_left[x] +  sum_right[x] = sum_total[x]
+        # and that sum_total is known, we are going to update
+        # sum_left from the direction that require the least amount
+        # of computations, i.e. from pos to new_pos or from end to new_pos.
+        if (new_pos - pos) <= (end_non_missing - new_pos):
+            for p in range(pos, new_pos):
+                i = sample_indices[p]
+
+                if sample_weight is not None:
+                    w = sample_weight[i]
+
+                for k in range(self.n_outputs):
+                    self.sum_left[k] += w * self.y[i, k]
+
+                self.weighted_n_left += w
+        else:
+            self.reverse_reset()
+
+            for p in range(end_non_missing - 1, new_pos - 1, -1):
+                i = sample_indices[p]
+
+                if sample_weight is not None:
+                    w = sample_weight[i]
+
+                for k in range(self.n_outputs):
+                    self.sum_left[k] -= w * self.y[i, k]
+
+                self.weighted_n_left -= w
+
+        self.weighted_n_right = (self.weighted_n_node_samples -
+                                 self.weighted_n_left)
+        for k in range(self.n_outputs):
+            self.sum_right[k] = self.sum_total[k] - self.sum_left[k]
+
+        self.pos = new_pos
+        return 0
+
+    cdef float64_t node_impurity(self) noexcept nogil:
+        pass
+
+    cdef void children_impurity(self, float64_t* impurity_left,
+                                float64_t* impurity_right) noexcept nogil:
+        pass
+
+    cdef void node_value(self, float64_t* dest) noexcept nogil:
+        """Compute the node value of sample_indices[start:end] into dest."""
+        cdef intp_t k
+
+        for k in range(self.n_outputs):
+            dest[k] = self.sum_total[k] / self.weighted_n_node_samples
+
+    cdef inline void clip_node_value(self, float64_t* dest, float64_t lower_bound, float64_t upper_bound) noexcept nogil:
+        """Clip the value in dest between lower_bound and upper_bound for monotonic constraints."""
+        if dest[0] < lower_bound:
+            dest[0] = lower_bound
+        elif dest[0] > upper_bound:
+            dest[0] = upper_bound
+
+    cdef float64_t middle_value(self) noexcept nogil:
+        """Compute the middle value of a split for monotonicity constraints as the simple average
+        of the left and right children values.
+
+        Monotonicity constraints are only supported for single-output trees we can safely assume
+        n_outputs == 1.
+        """
+        return (
+            (self.sum_left[0] / (2 * self.weighted_n_left)) +
+            (self.sum_right[0] / (2 * self.weighted_n_right))
+        )
+
+    cdef bint check_monotonicity(
+        self,
+        cnp.int8_t monotonic_cst,
+        float64_t lower_bound,
+        float64_t upper_bound,
+    ) noexcept nogil:
+        """Check monotonicity constraint is satisfied at the current regression split"""
+        cdef:
+            float64_t value_left = self.sum_left[0] / self.weighted_n_left
+            float64_t value_right = self.sum_right[0] / self.weighted_n_right
+
+        return self._check_monotonicity(monotonic_cst, lower_bound, upper_bound, value_left, value_right)
+
+cdef class WeightedMSE(WeightedRegressionCriterion):
+    """Mean squared error impurity criterion.
+
+        MSE = var_left + var_right
+    """
+
+    cdef float64_t node_impurity(self) noexcept nogil:
+        """Evaluate the impurity of the current node.
+
+        Evaluate the MSE criterion as impurity of the current node,
+        i.e. the impurity of sample_indices[start:end]. The smaller the impurity the
+        better.
+        """
+        cdef float64_t impurity
+        cdef intp_t k
+
+        impurity = self.sq_sum_total / self.weighted_n_node_samples
+        for k in range(self.n_outputs):
+            impurity -= (self.sum_total[k] / self.weighted_n_node_samples)**2.0
+
+        return impurity / self.n_outputs
+
+    cdef float64_t proxy_impurity_improvement(self) noexcept nogil:
+        """Compute a proxy of the impurity reduction.
+
+        This method is used to speed up the search for the best split.
+        It is a proxy quantity such that the split that maximizes this value
+        also maximizes the impurity improvement. It neglects all constant terms
+        of the impurity decrease for a given split.
+
+        The absolute impurity improvement is only computed by the
+        impurity_improvement method once the best split has been found.
+
+        The MSE proxy is derived from
+
+            sum_{i left}(y_i - y_pred_L)^2 + sum_{i right}(y_i - y_pred_R)^2
+            = sum(y_i^2) - n_L * mean_{i left}(y_i)^2 - n_R * mean_{i right}(y_i)^2
+
+        Neglecting constant terms, this gives:
+
+            - 1/n_L * sum_{i left}(y_i)^2 - 1/n_R * sum_{i right}(y_i)^2
+        """
+        cdef intp_t k
+        cdef float64_t proxy_impurity_left = 0.0
+        cdef float64_t proxy_impurity_right = 0.0
+
+        for k in range(self.n_outputs):
+            proxy_impurity_left += self.sum_left[k] * self.sum_left[k]
+            proxy_impurity_right += self.sum_right[k] * self.sum_right[k]
+
+        return (proxy_impurity_left / self.weighted_n_left +
+                proxy_impurity_right / self.weighted_n_right)
+
+    cdef void children_impurity(self, float64_t* impurity_left,
+                                float64_t* impurity_right) noexcept nogil:
+        """Evaluate the impurity in children nodes.
+
+        i.e. the impurity of the left child (sample_indices[start:pos]) and the
+        impurity the right child (sample_indices[pos:end]).
+        """
+        cdef const float64_t[:] sample_weight = self.sample_weight
+        cdef const intp_t[:] sample_indices = self.sample_indices
+        cdef intp_t pos = self.pos
+        cdef intp_t start = self.start
+
+        cdef float64_t y_ik
+
+        cdef float64_t sq_sum_left = 0.0
+        cdef float64_t sq_sum_right
+
+        cdef intp_t i
+        cdef intp_t p
+        cdef intp_t k
+        cdef float64_t w = 1.0
+
+        cdef intp_t end_non_missing
+
+        for p in range(start, pos):
+            i = sample_indices[p]
+
+            if sample_weight is not None:
+                w = sample_weight[i]
+
+            for k in range(self.n_outputs):
+                y_ik = self.y[i, k]
+                sq_sum_left += w * y_ik * y_ik
+
+        if self.missing_go_to_left:
+            # add up the impact of these missing values on the left child
+            # statistics.
+            # Note: this only impacts the square sum as the sum
+            # is modified elsewhere.
+            end_non_missing = self.end - self.n_missing
+
+            for p in range(end_non_missing, self.end):
+                i = sample_indices[p]
+                if sample_weight is not None:
+                    w = sample_weight[i]
+
+                for k in range(self.n_outputs):
+                    y_ik = self.y[i, k]
+                    sq_sum_left += w * y_ik * y_ik
+
+        sq_sum_right = self.sq_sum_total - sq_sum_left
+
+        impurity_left[0] = sq_sum_left / self.weighted_n_left
+        impurity_right[0] = sq_sum_right / self.weighted_n_right
+
+        for k in range(self.n_outputs):
+            impurity_left[0] -= (self.sum_left[k] / self.weighted_n_left) ** 2.0
+            impurity_right[0] -= (self.sum_right[k] / self.weighted_n_right) ** 2.0
+
+        impurity_left[0] /= self.n_outputs
+        impurity_right[0] /= self.n_outputs
+
+
+
+------------------lukas end------------------------------------------------------------------------------------------------------
+
 
 
 cdef class MAE(RegressionCriterion):
