@@ -899,8 +899,8 @@ cdef class RegressionCriterion(Criterion):
 
 
                 # added from lukas
-                #if k == 1:
-                 #   k = 1
+                if k == 1:
+                    k = 1
 
                 #if k == self.index_of_AL2CU:
                  #   y_ik *= self.weight_for_AL2CU
@@ -918,7 +918,6 @@ cdef class RegressionCriterion(Criterion):
     cdef void init_sum_missing(self):
         """Init sum_missing to hold sums for missing values."""
         self.sum_missing = np.zeros(self.n_outputs, dtype=np.float64)
-        print("ok")
 
     cdef void init_missing(self, intp_t n_missing) noexcept nogil:
         """Initialize sum_missing if there are missing values.
