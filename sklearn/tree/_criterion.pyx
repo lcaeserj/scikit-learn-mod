@@ -875,6 +875,7 @@ cdef class RegressionCriterion(Criterion):
         self.n_node_samples = end - start
         self.weighted_n_samples = weighted_n_samples
         self.weighted_n_node_samples = 0.
+        self.test = 1
 
         cdef intp_t i
         cdef intp_t p
@@ -896,8 +897,9 @@ cdef class RegressionCriterion(Criterion):
                 y_ik = self.y[i, k]
 
                 # added from lukas
-                if k == self.index_of_AL2CU:
-                    k = 1
+                #if k == 1:
+                 #   k = 1
+
                 #if k == self.index_of_AL2CU:
                  #   y_ik *= self.weight_for_AL2CU
 
