@@ -845,9 +845,7 @@ cdef class RegressionCriterion(Criterion):
         self.sum_left = np.zeros(n_outputs, dtype=np.float64)
         self.sum_right = np.zeros(n_outputs, dtype=np.float64)
 
-        # added by lukas
-        self.weight_for_AL2CU = 2
-        self.index_of_AL2CU = 1
+    
 
     def __reduce__(self):
         return (type(self), (self.n_outputs, self.n_samples), self.__getstate__())
@@ -906,8 +904,8 @@ cdef class RegressionCriterion(Criterion):
                 #if k == index_of_AL2CU_local:
                  #   k = 1
 
-                #if k == self.index_of_AL2CU:
-                 #   y_ik *= self.weight_for_AL2CU
+                if k == 1:
+                    y_ik *= 1.5
 
                 w_y_ik = w * y_ik
                 self.sum_total[k] += w_y_ik
