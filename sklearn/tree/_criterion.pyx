@@ -36,9 +36,7 @@ cdef class Criterion:
         float64_t weighted_n_samples,
         const intp_t[:] sample_indices,
         intp_t start,
-        intp_t end,
-        # added by lukas
-        intp_t AL2CU_index
+        intp_t end
     ) except -1 nogil:
         """Placeholder for a method which will initialize the criterion.
 
