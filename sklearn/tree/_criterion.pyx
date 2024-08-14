@@ -37,6 +37,8 @@ cdef class Criterion:
         const intp_t[:] sample_indices,
         intp_t start,
         intp_t end,
+        # added by lukas
+        intp_t AL2CU_index
     ) except -1 nogil:
         """Placeholder for a method which will initialize the criterion.
 
@@ -860,7 +862,7 @@ cdef class RegressionCriterion(Criterion):
         const intp_t[:] sample_indices,
         intp_t start,
         intp_t end,
-        intp_t AL2CU_index,
+        
     ) except -1 nogil:
         """Initialize the criterion.
 
@@ -877,7 +879,7 @@ cdef class RegressionCriterion(Criterion):
         self.weighted_n_samples = weighted_n_samples
         self.weighted_n_node_samples = 0.
 
-        self.AL2CU_index = AL2CU_index
+        
 
 
         cdef intp_t i
@@ -887,7 +889,6 @@ cdef class RegressionCriterion(Criterion):
         cdef float64_t w_y_ik
         cdef float64_t w = 1.0
 
-        cdef intp_t index_of_AL2CU_local = self.index_of_AL2CU
 
         self.sq_sum_total = 0.0
         memset(&self.sum_total[0], 0, self.n_outputs * sizeof(float64_t))
