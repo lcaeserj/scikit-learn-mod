@@ -71,7 +71,7 @@ CRITERIA_REG = {
     "absolute_error": _criterion.MAE,
     "poisson": _criterion.Poisson,
     # added by lukas
-    "weighted_squared_error": _criterion.WeightedMSE
+    #"weighted_squared_error": _criterion.WeightedMSE
 }
 
 DENSE_SPLITTERS = {"best": _splitter.BestSplitter, "random": _splitter.RandomSplitter}
@@ -136,8 +136,8 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
         random_state,
         min_impurity_decrease,
         # added by lukas
-        AL2CU_weight=None,
-        AL2CU_index=None,
+        #AL2CU_weight=None,
+        #AL2CU_index=None,
 
         class_weight=None,
         ccp_alpha=0.0,
@@ -154,8 +154,8 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
         self.random_state = random_state
         self.min_impurity_decrease = min_impurity_decrease
         # added by lukas
-        self.AL2CU_weight = AL2CU_weight,
-        self.AL2CU_index = AL2CU_index,
+        #self.AL2CU_weight = AL2CU_weight,
+        #self.AL2CU_index = AL2CU_index,
 
         self.class_weight = class_weight
         self.ccp_alpha = ccp_alpha
@@ -385,12 +385,13 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
                     self.n_outputs_, self.n_classes_
                 )
             else:
+                criterion = CRITERIA_REG[self.criterion](self.n_outputs_, n_samples)
                 # added by lukas
-                if self.criterion == "weighted_squared_error":
-                    criterion = CRITERIA_REG[self.criterion](self.n_outputs_, n_samples,
-                                                             self.AL2CU_index, self.AL2CU_weight)
-                else:
-                    criterion = CRITERIA_REG[self.criterion](self.n_outputs_, n_samples)
+                #if self.criterion == "weighted_squared_error":
+                 #   criterion = CRITERIA_REG[self.criterion](self.n_outputs_, n_samples,
+                  #                                           self.AL2CU_index, self.AL2CU_weight)
+                #else:
+                    #criterion = CRITERIA_REG[self.criterion](self.n_outputs_, n_samples)
         else:
             # Make a deepcopy in case the criterion has mutable attributes that
             # might be shared and modified concurrently during parallel fitting
