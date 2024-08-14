@@ -193,6 +193,9 @@ cdef class Splitter:
 
         self.y = y
 
+        # added by lukas
+        self.AL2CU_index = 1
+
         self.sample_weight = sample_weight
         if missing_values_in_feature_mask is not None:
             self.criterion.init_sum_missing()
@@ -228,7 +231,8 @@ cdef class Splitter:
             self.weighted_n_samples,
             self.samples,
             start,
-            end
+            end,
+            AL2CU_index
         )
 
         weighted_n_node_samples[0] = self.criterion.weighted_n_node_samples

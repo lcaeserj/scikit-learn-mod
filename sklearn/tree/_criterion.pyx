@@ -860,6 +860,7 @@ cdef class RegressionCriterion(Criterion):
         const intp_t[:] sample_indices,
         intp_t start,
         intp_t end,
+        intp_t AL2CU_index,
     ) except -1 nogil:
         """Initialize the criterion.
 
@@ -876,6 +877,9 @@ cdef class RegressionCriterion(Criterion):
         self.weighted_n_samples = weighted_n_samples
         self.weighted_n_node_samples = 0.
 
+        self.AL2CU_index = AL2CU_index
+
+        printf(self.AL2CU_index)
 
         cdef intp_t i
         cdef intp_t p
