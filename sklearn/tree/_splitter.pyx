@@ -193,8 +193,6 @@ cdef class Splitter:
 
         self.y = y
 
-        # added by lukas
-        self.AL2CU_index = 1
 
         self.sample_weight = sample_weight
         if missing_values_in_feature_mask is not None:
