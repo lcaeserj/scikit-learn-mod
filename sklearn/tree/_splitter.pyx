@@ -232,7 +232,7 @@ cdef class Splitter:
             self.samples,
             start,
             end,
-            AL2CU_index
+            self.AL2CU_index
         )
 
         weighted_n_node_samples[0] = self.criterion.weighted_n_node_samples

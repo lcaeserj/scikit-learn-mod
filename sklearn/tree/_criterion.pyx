@@ -879,7 +879,6 @@ cdef class RegressionCriterion(Criterion):
 
         self.AL2CU_index = AL2CU_index
 
-        printf(self.AL2CU_index)
 
         cdef intp_t i
         cdef intp_t p
