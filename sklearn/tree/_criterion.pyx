@@ -845,6 +845,8 @@ cdef class RegressionCriterion(Criterion):
         self.sum_left = np.zeros(n_outputs, dtype=np.float64)
         self.sum_right = np.zeros(n_outputs, dtype=np.float64)
 
+        print("mod")
+
     
 
     def __reduce__(self):
@@ -889,7 +891,6 @@ cdef class RegressionCriterion(Criterion):
         self.sq_sum_total = 0.0
         memset(&self.sum_total[0], 0, self.n_outputs * sizeof(float64_t))
 
-        printf("mod")
 
         for p in range(start, end):
             i = sample_indices[p]
