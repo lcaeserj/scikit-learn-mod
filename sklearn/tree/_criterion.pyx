@@ -907,7 +907,7 @@ cdef class RegressionCriterion(Criterion):
                  #   k = 1
 
                 if k == 1:
-                    y_ik *= 1.5
+                    y_ik *= 2
 
                 w_y_ik = w * y_ik
                 self.sum_total[k] += w_y_ik
