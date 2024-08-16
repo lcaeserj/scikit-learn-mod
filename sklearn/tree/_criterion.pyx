@@ -1098,9 +1098,18 @@ cdef class MSE(RegressionCriterion):
         """
         cdef float64_t impurity
         cdef intp_t k
-
+        cdef float64_t purifying_reduction_coefficient
+        # lukas: impurity manipulation should be here
         impurity = self.sq_sum_total / self.weighted_n_node_samples
+        purifying_reduction_coefficient = 0.8
         for k in range(self.n_outputs):
+            # added by lukas: reducing the purifying effect of target with index 1 by 1 - purifying_reduction_coefficient.
+            # Therefore, forcing the splitter to find splits where target_1 is especially pure.
+            # This only should be used during training and not when model is used in production as
+            # this purifying reduction only serves to adjust the tree structures to the data given 
+            # that only target 1 is predicted with rather low performance.
+            if k == 1:
+                impurity -= purifying_reduction_coefficient*(self.sum_total[k] / self.weighted_n_node_samples)**2.0
             impurity -= (self.sum_total[k] / self.weighted_n_node_samples)**2.0
 
         return impurity / self.n_outputs
