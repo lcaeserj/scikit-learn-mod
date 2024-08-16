@@ -1166,6 +1166,7 @@ cdef class MSE(RegressionCriterion):
         cdef intp_t p
         cdef intp_t k
         cdef float64_t w = 1.0
+        purifying_reduction_coefficient = 0.8
 
         cdef intp_t end_non_missing
 
@@ -1201,6 +1202,11 @@ cdef class MSE(RegressionCriterion):
         impurity_right[0] = sq_sum_right / self.weighted_n_right
 
         for k in range(self.n_outputs):
+            if k == 1:
+                impurity_left[0] = purifying_reduction_coefficient * (self.sum_left[k] / self.weighted_n_left) ** 2.0
+                impurity_right[0] -= purifying_reduction_coefficient * (self.sum_right[k] / self.weighted_n_right) ** 2.0
+
+
             impurity_left[0] -= (self.sum_left[k] / self.weighted_n_left) ** 2.0
             impurity_right[0] -= (self.sum_right[k] / self.weighted_n_right) ** 2.0
 
