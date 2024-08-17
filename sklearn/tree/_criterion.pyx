@@ -844,7 +844,7 @@ cdef class RegressionCriterion(Criterion):
         self.sum_total = np.zeros(n_outputs, dtype=np.float64)
         self.sum_left = np.zeros(n_outputs, dtype=np.float64)
         self.sum_right = np.zeros(n_outputs, dtype=np.float64)
-        #print("moddd")
+        print("moddd")
 
     
 
@@ -1102,7 +1102,6 @@ cdef class MSE(RegressionCriterion):
         # lukas: impurity manipulation should be here
         impurity = self.sq_sum_total / self.weighted_n_node_samples
         purifying_reduction_coefficient = 0.99
-        print(purifying_reduction_coefficient)
         for k in range(self.n_outputs):
             # added by lukas: reducing the purifying effect of target with index 1 by 1 - purifying_reduction_coefficient.
             # Therefore, forcing the splitter to find splits where target_1 is especially pure.
